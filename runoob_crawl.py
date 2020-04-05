@@ -3,7 +3,6 @@
 
 # In[57]:
 
-
 import sys,re,os
 import time
 from PyPDF2 import utils, PdfFileReader, PdfFileWriter
@@ -15,9 +14,7 @@ import collections
 import subprocess
 import shutil
 
-
 # In[58]:
-
 
 def crawl(crawl_url):
     html = urlopen(crawl_url)
@@ -31,27 +28,29 @@ def crawl(crawl_url):
     for html in html_list:
         if not html['href'].startswith('http'):
             val = "/".join(crawl_url.split("/")[0:-1]) + "/" + html['href']
-            html_dict[html.string.strip()] = val
+            try:
+                html_dict[html.get_text().strip()] = val
+            except:
+            	print(html_list)
         else:
-            html_dict[html.string.strip()] = html['href']
+            html_dict[html.get_text().strip()] = html['href']
 
     return html_dict
 
-
 # In[59]:
-
 
 def html2pdf(dic):
     for ite in dic:
         #pdf_rename = ite.replace("/", "_").replace("&", "_").replace("$", "_").replace(" ", "_").replace("(", "_").replace(")", "_")
         pdf_rename = ite.replace("`","_").replace("~","_").replace("!","_").replace("@","_").replace("#","_").replace("$","_").replace("%","_").replace("^","_").replace("&","_").replace("*","_").replace("(","_").replace(")","_").replace("-","_").replace("=","_").replace(")","_").replace("+","_").replace("[","_").replace("]","_").replace("\\","_").replace("{","_").replace("}","_").replace("|","_").replace(";","_").replace("'","_").replace(":","_").replace("\"","_").replace("<","_").replace(">","_").replace("?","_").replace(",","_").replace(".","_").replace("/","_").replace(" ","_")
-        output = subprocess.call('sh html2pdf.sh %s %s' %(dic[ite],pdf_rename),shell=True)
-        if output != 0:
-            print("Error in transfer html to pdf")
-
+        if os.path.exists("./pdfs/%s.pdf" %(pdf_rename)):
+            print('pdf file exists')
+        else:
+            output = subprocess.call('bash html2pdf.sh %s %s' %(dic[ite],pdf_rename),shell=True)
+            if output != 0:
+                print("Error in transfer html to pdf")
 
 # In[60]:
-
 
 def merge_pdfs(dic,chapter_name):
     filenames = []
@@ -60,9 +59,7 @@ def merge_pdfs(dic,chapter_name):
         filenames.append(pdf_rename)
     merge_pdf_core(chapter_name,filenames)
 
-
 # In[61]:
-
 
 # Original author Nicholas Kim, modified by Yan Pashkovsky
 # New license - GPL v3
@@ -101,29 +98,23 @@ def merge_pdf_core(chapter_name,filenames):
     try:
         output_pdf_file = open(output_pdf_name, "wb")
         output_pdf_stream.write(output_pdf_file)
-    finally:
         output_pdf_file.close()
-
+    except:
+        pass
     # print "%s successfully created." % output_pdf_name
 
-
 # In[62]:
-
 
 def get_and_merge(URL,chapter_name):
     DIC = crawl(URL)
     html2pdf(DIC)
     merge_pdfs(DIC,chapter_name)
 
-
 # In[63]:
-
 
 # get_and_merge("http://www.runoob.com/memcached/memcached-tutorial.html",'【学习 memcached】')
 
-
 # In[66]:
-
 
 def main():
     url ="http://www.runoob.com/"
@@ -150,15 +141,18 @@ def main():
 
     for fold in dic_total:
         for link in dic_total[fold]:
+            if os.path.exists("./runoob/%s/%s.pdf" % (fold, link)):
+                print('pdf already merged, skipped')
+                continue
             get_and_merge(dic_total[fold][link],link)
             print("finish one")
-            shutil.move("%s.pdf"%(link),"./runoob/%s"%(fold))
+            try:
+                shutil.move("%s.pdf"%(link), "./runoob/%s"%(fold))
+            except:
+                print("move %s.pdf error"%(link))
     print("All runoob was downloaded !")
-
 
 # In[67]:
 
-
 if __name__ == "__main__":
     main()
-
